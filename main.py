@@ -5,8 +5,16 @@ import sys
 
 
 def send_apns_payload(device_token, apns_payload):
-    xcrun_command = f"echo '{apns_payload}' | xcrun simctl push {device_token}"
-    subprocess.run(xcrun_command)
+    try:
+        subprocess.run(
+            ["xcrun", "simctl", "push", device_token, apns_payload],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as e:
+        print(f"Error sending push notification: {e.stderr}")
+        sys.exit(1)
 
 
 def create_apns_payload(title, body, action, bundle):
@@ -32,42 +40,52 @@ def create_apns_payload(title, body, action, bundle):
 
 
 def get_simulator_devices():
-    available_devices = []
+    try:
+        result = subprocess.run(
+            ["xcrun", "simctl", "list", "devices", "booted", "--json"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        devices = json.loads(result.stdout)
+        available_devices = []
 
-    result = subprocess.run(
-        ["xcrun", "simctl", "list", "devices", "booted", "--json"],
-        capture_output=True,
-        text=True,
-    )
-    devices = json.loads(result.stdout)
+        for device_list in devices["devices"].items():
+            for device in device_list:
+                if "state" in device:
+                    model = device["name"]
+                    udid = device["udid"]
+                    if model.startswith("iPhone"):
+                        print(f"- Model: {model}, Device Token: {udid}")
+                        available_devices.append((model, udid))
 
-    for device_list in devices["devices"].items():
-        for device in device_list:
-            if "state" in device:
-                model = device["name"]
-                udid = device["udid"]
-                if model.startswith("iPhone"):
-                    print(f"- Model: {model}, Device Token: {udid}")
-                    available_devices.append((model, udid))
-
-    return available_devices
+        return available_devices
+    except subprocess.CalledProcessError as e:
+        print(f"Error retrieving simulator devices: {e.stderr}")
+        return []
 
 
 def get_bundle_identifiers(device_udid):
-    bundle_choices = []
+    try:
+        result = subprocess.run(
+            ["xcrun", "simctl", "listapps", device_udid],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        bundle_choices = []
 
-    output = subprocess.check_output(["xcrun", "simctl", "listapps", device_udid])
-    output_options = output.decode("utf-8").splitlines()
+        for line in result.stdout.splitlines():
+            if "CFBundleIdentifier" in line:
+                start_index = line.find('"') + 1
+                end_index = line.find('"', start_index)
+                cf_bundle_identifier = line[start_index:end_index]
+                bundle_choices.append(cf_bundle_identifier)
 
-    for line in output_options:
-        if "CFBundleIdentifier" in line:
-            start_index = line.find('"') + 1
-            end_index = line.find('"')
-            cf_bundle_identifier = line[start_index:end_index]
-
-            bundle_choices.append(cf_bundle_identifier)
-
-    return bundle_choices
+        return bundle_choices
+    except subprocess.CalledProcessError as e:
+        print(f"Error retrieving bundle identifiers: {e.stderr}")
+        return []
 
 
 if __name__ == "__main__":
