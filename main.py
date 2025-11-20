@@ -6,7 +6,7 @@ import sys
 
 def send_apns_payload(device_token, apns_payload):
     xcrun_command = f"echo '{apns_payload}' | xcrun simctl push {device_token}"
-    subprocess.run(xcrun_command, shell=True)
+    subprocess.run(xcrun_command)
 
 
 def create_apns_payload(title, body, action, bundle):
@@ -31,7 +31,9 @@ def create_apns_payload(title, body, action, bundle):
     return json.dumps(apns_payload)
 
 
-def get_simulator_devices(available_devices):
+def get_simulator_devices():
+    available_devices = []
+
     result = subprocess.run(
         ["xcrun", "simctl", "list", "devices", "booted", "--json"],
         capture_output=True,
@@ -48,8 +50,12 @@ def get_simulator_devices(available_devices):
                     print(f"- Model: {model}, Device Token: {udid}")
                     available_devices.append((model, udid))
 
+    return available_devices
 
-def get_bundle_identifiers(bundle_choices, device_udid):
+
+def get_bundle_identifiers(device_udid):
+    bundle_choices = []
+
     output = subprocess.check_output(["xcrun", "simctl", "listapps", device_udid])
     output_options = output.decode("utf-8").splitlines()
 
@@ -61,11 +67,12 @@ def get_bundle_identifiers(bundle_choices, device_udid):
 
             bundle_choices.append(cf_bundle_identifier)
 
+    return bundle_choices
+
 
 if __name__ == "__main__":
-    available_devices = []
+    available_devices = get_simulator_devices()
 
-    get_simulator_devices(available_devices)
     if len(available_devices) == 0:
         print(
             "No devices found. Make sure your simulator device is available, then run the program again."
@@ -76,8 +83,7 @@ if __name__ == "__main__":
         "Select the device token:", choices=available_devices
     )
 
-    bundle_choices = []
-    get_bundle_identifiers(bundle_choices, device_token)
+    bundle_choices = get_bundle_identifiers(device_token)
 
     if len(bundle_choices) == 0:
         print(
