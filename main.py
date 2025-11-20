@@ -60,3 +60,41 @@ def get_bundle_identifiers(bundle_choices, device_udid):
             cf_bundle_identifier = line[start_index:end_index]
 
             bundle_choices.append(cf_bundle_identifier)
+
+
+if __name__ == "__main__":
+    available_devices = []
+
+    get_simulator_devices(available_devices)
+    if len(available_devices) == 0:
+        print(
+            "No devices found. Make sure your simulator device is available, then run the program again."
+        )
+        sys.exit(0)
+
+    device_token = inquirer.list_input(
+        "Select the device token:", choices=available_devices
+    )
+
+    bundle_choices = []
+    get_bundle_identifiers(bundle_choices, device_token)
+
+    if len(bundle_choices) == 0:
+        print(
+            "No apps installed. Make sure your simulator device has apps installed, then run the program again."
+        )
+        sys.exit(0)
+
+    bundle = inquirer.list_input(
+        "Select the bundle identifier:", choices=bundle_choices
+    )
+    title = inquirer.text(
+        message="Enter the push notification title (default: Push Notification Title):"
+    )
+    body = inquirer.text(
+        message="Enter the push notification body (default: Push Notification Body):"
+    )
+    action = inquirer.text(message="Enter the action :")
+
+    apns_payload = create_apns_payload(title, body, action, bundle)
+    send_apns_payload(device_token, apns_payload)
