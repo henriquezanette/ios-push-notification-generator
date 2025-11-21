@@ -23,16 +23,16 @@ def create_apns_payload(title, body, action, bundle):
             "alert": {
                 "title": title or "Push Notification Title",
                 "body": body or "Push Notification Body",
-                "sound": "bingbonf.aiff",
+                "sound": "bingbong.aiff",
             },
             "badge": 1,
         },
         "gcm.message_id": "firebase-id",
         "priority": "high",
-        "content-available": True,
+        "content_available": True,
         "mutable_content": True,
         "id": "mock-push-notification-id",
-        "action": action,
+        "action": action or "bmw://connected/vehicle",
         "Simulator Target Bundle": bundle,
     }
 
@@ -50,7 +50,7 @@ def get_simulator_devices():
         devices = json.loads(result.stdout)
         available_devices = []
 
-        for device_list in devices["devices"].items():
+        for _, device_list in devices["devices"].items():
             for device in device_list:
                 if "state" in device:
                     model = device["name"]
@@ -98,7 +98,7 @@ if __name__ == "__main__":
         sys.exit(0)
 
     device_token = inquirer.list_input(
-        "Select the device token:", choices=available_devices
+        "Select the device token", choices=available_devices
     )
 
     bundle_choices = get_bundle_identifiers(device_token)
@@ -113,12 +113,12 @@ if __name__ == "__main__":
         "Select the bundle identifier:", choices=bundle_choices
     )
     title = inquirer.text(
-        message="Enter the push notification title (default: Push Notification Title):"
+        message="Enter the push notification title (default: Push Notification Title)"
     )
     body = inquirer.text(
-        message="Enter the push notification body (default: Push Notification Body):"
+        message="Enter the push notification body (default: Push Notification Body)"
     )
-    action = inquirer.text(message="Enter the action :")
+    action = inquirer.text(message="Enter the action")
 
     apns_payload = create_apns_payload(title, body, action, bundle)
     send_apns_payload(device_token, apns_payload)
