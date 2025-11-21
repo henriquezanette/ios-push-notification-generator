@@ -6,12 +6,8 @@ import sys
 
 def send_apns_payload(device_token, apns_payload):
     try:
-        subprocess.run(
-            ["xcrun", "simctl", "push", device_token, apns_payload],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
+        xcrun_command = f"echo '{apns_payload}' | xcrun simctl push {device_token} -"
+        subprocess.run(xcrun_command, shell=True)
     except subprocess.CalledProcessError as e:
         print(f"Error sending push notification: {e.stderr}")
         sys.exit(1)
@@ -32,7 +28,7 @@ def create_apns_payload(title, body, action, bundle):
         "content_available": True,
         "mutable_content": True,
         "id": "mock-push-notification-id",
-        "action": action or "bmw://connected/vehicle",
+        "action": action or "",
         "Simulator Target Bundle": bundle,
     }
 
